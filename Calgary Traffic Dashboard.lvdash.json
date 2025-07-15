@@ -141,130 +141,6 @@
         "  FROM\n",
         "    dates"
       ]
-    },
-    {
-      "name": "cc584069",
-      "displayName": "traffic_incidents (Forecasted)",
-      "queryLines": [
-        "WITH original_table AS (\n",
-        "    SELECT \n",
-        "  DATE_TRUNC(\"HOUR\", `modified_dt`) AS modified_dt,\n",
-        "  COUNT(*) AS count\n",
-        "FROM (\n",
-        "    SELECT\n",
-        "  *\n",
-        "FROM\n",
-        "  gshen_catalog.city_of_calgary.traffic_incidents\n",
-        ") GROUP BY 1\n",
-        "  ),\n",
-        "  dates AS (\n",
-        "    SELECT \n",
-        "      MAX(modified_dt) AS max_date_column,\n",
-        "      MIN(modified_dt) AS min_date_column,\n",
-        "      MAX_BY(count, modified_dt) AS count\n",
-        "    FROM original_table\n",
-        "  ),\n",
-        "  forecast_table AS (\n",
-        "    SELECT \n",
-        "      modified_dt,\n",
-        "      count_forecast,\n",
-        "      count_upper,\n",
-        "      count_lower,\n",
-        "      NULL AS count\n",
-        "    FROM AI_FORECAST(\n",
-        "      TABLE(original_table),\n",
-        "      horizon => (\n",
-        "        SELECT\n",
-        "          max_date_column + MAKE_DT_INTERVAL(CAST(FLOOR(DATEDIFF(max_date_column, min_date_column) * 0.5) AS INT), 0, 0, 0)\n",
-        "        FROM dates\n",
-        "      ),\n",
-        "      time_col => 'modified_dt',\n",
-        "      value_col => 'count'\n",
-        "    )\n",
-        "  )\n",
-        "\n",
-        "  SELECT * FROM forecast_table\n",
-        "  UNION ALL\n",
-        "  SELECT\n",
-        "    modified_dt,\n",
-        "    NULL AS count_forecast,\n",
-        "    NULL AS count_upper,\n",
-        "    NULL AS count_lower,\n",
-        "    count\n",
-        "  FROM original_table\n",
-        "    WHERE modified_dt < (SELECT max_date_column FROM dates)\n",
-        "  UNION ALL\n",
-        "  SELECT\n",
-        "    max_date_column AS modified_dt,\n",
-        "    count AS count_forecast,\n",
-        "    count AS count_upper,\n",
-        "    count AS count_lower,\n",
-        "    count\n",
-        "  FROM\n",
-        "    dates"
-      ]
-    },
-    {
-      "name": "313b55e0",
-      "displayName": "traffic_incidents (Forecasted)",
-      "queryLines": [
-        "WITH original_table AS (\n",
-        "    SELECT \n",
-        "  DATE_TRUNC(\"HOUR\", `modified_dt`) AS modified_dt,\n",
-        "  COUNT(*) AS count\n",
-        "FROM (\n",
-        "    SELECT\n",
-        "  *\n",
-        "FROM\n",
-        "  gshen_catalog.city_of_calgary.traffic_incidents\n",
-        ") GROUP BY 1\n",
-        "  ),\n",
-        "  dates AS (\n",
-        "    SELECT \n",
-        "      MAX(modified_dt) AS max_date_column,\n",
-        "      MIN(modified_dt) AS min_date_column,\n",
-        "      MAX_BY(count, modified_dt) AS count\n",
-        "    FROM original_table\n",
-        "  ),\n",
-        "  forecast_table AS (\n",
-        "    SELECT \n",
-        "      modified_dt,\n",
-        "      count_forecast,\n",
-        "      count_upper,\n",
-        "      count_lower,\n",
-        "      NULL AS count\n",
-        "    FROM AI_FORECAST(\n",
-        "      TABLE(original_table),\n",
-        "      horizon => (\n",
-        "        SELECT\n",
-        "          max_date_column + MAKE_DT_INTERVAL(CAST(FLOOR(DATEDIFF(max_date_column, min_date_column) * 0.5) AS INT), 0, 0, 0)\n",
-        "        FROM dates\n",
-        "      ),\n",
-        "      time_col => 'modified_dt',\n",
-        "      value_col => 'count'\n",
-        "    )\n",
-        "  )\n",
-        "\n",
-        "  SELECT * FROM forecast_table\n",
-        "  UNION ALL\n",
-        "  SELECT\n",
-        "    modified_dt,\n",
-        "    NULL AS count_forecast,\n",
-        "    NULL AS count_upper,\n",
-        "    NULL AS count_lower,\n",
-        "    count\n",
-        "  FROM original_table\n",
-        "    WHERE modified_dt < (SELECT max_date_column FROM dates)\n",
-        "  UNION ALL\n",
-        "  SELECT\n",
-        "    max_date_column AS modified_dt,\n",
-        "    count AS count_forecast,\n",
-        "    count AS count_upper,\n",
-        "    count AS count_lower,\n",
-        "    count\n",
-        "  FROM\n",
-        "    dates"
-      ]
     }
   ],
   "pages": [
@@ -381,49 +257,9 @@
           },
           "position": {
             "x": 0,
-            "y": 0,
+            "y": 1,
             "width": 4,
-            "height": 11
-          }
-        },
-        {
-          "widget": {
-            "name": "6cb6284d",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "bf472e25",
-                  "fields": [
-                    {
-                      "name": "camera_url",
-                      "expression": "`camera_url`"
-                    }
-                  ],
-                  "disaggregated": true
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "camera_url",
-                  "displayName": "camera_url"
-                }
-              },
-              "frame": {
-                "showTitle": true,
-                "title": "Traffic Camera Link"
-              }
-            }
-          },
-          "position": {
-            "x": 4,
-            "y": 2,
-            "width": 2,
-            "height": 1
+            "height": 12
           }
         },
         {
@@ -475,9 +311,9 @@
           },
           "position": {
             "x": 4,
-            "y": 3,
+            "y": 0,
             "width": 2,
-            "height": 9
+            "height": 6
           }
         },
         {
@@ -534,7 +370,7 @@
           },
           "position": {
             "x": 0,
-            "y": 11,
+            "y": 0,
             "width": 2,
             "height": 1
           }
@@ -563,6 +399,10 @@
                     {
                       "name": "impact_on_traffic",
                       "expression": "`impact_on_traffic`"
+                    },
+                    {
+                      "name": "camera_url",
+                      "expression": "`camera_url`"
                     }
                   ],
                   "disaggregated": true
@@ -682,6 +522,33 @@
                     "useMonospaceFont": false,
                     "preserveWhitespace": false,
                     "displayName": "impact_on_traffic"
+                  },
+                  {
+                    "fieldName": "camera_url",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100011,
+                    "title": "camera_url",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": true,
+                    "highlightLinks": true,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "displayName": "camera_url"
                   }
                 ]
               },
@@ -867,31 +734,6 @@
                   "preserveWhitespace": false
                 },
                 {
-                  "booleanValues": [
-                    "false",
-                    "true"
-                  ],
-                  "imageUrlTemplate": "{{ @ }}",
-                  "imageTitleTemplate": "{{ @ }}",
-                  "imageWidth": "",
-                  "imageHeight": "",
-                  "linkUrlTemplate": "{{ @ }}",
-                  "linkTextTemplate": "{{ @ }}",
-                  "linkTitleTemplate": "{{ @ }}",
-                  "linkOpenInNewTab": true,
-                  "name": "camera_url",
-                  "type": "string",
-                  "displayAs": "string",
-                  "order": 100011,
-                  "title": "camera_url",
-                  "allowSearch": false,
-                  "alignContent": "left",
-                  "allowHTML": false,
-                  "highlightLinks": false,
-                  "useMonospaceFont": false,
-                  "preserveWhitespace": false
-                },
-                {
                   "numberFormat": "0.00",
                   "booleanValues": [
                     "false",
@@ -931,8 +773,8 @@
           },
           "position": {
             "x": 0,
-            "y": 12,
-            "width": 3,
+            "y": 13,
+            "width": 6,
             "height": 9
           }
         },
@@ -970,8 +812,8 @@
             }
           },
           "position": {
-            "x": 4,
-            "y": 1,
+            "x": 2,
+            "y": 0,
             "width": 2,
             "height": 1
           }
@@ -1020,10 +862,10 @@
             }
           },
           "position": {
-            "x": 3,
-            "y": 12,
-            "width": 3,
-            "height": 9
+            "x": 4,
+            "y": 6,
+            "width": 2,
+            "height": 7
           }
         }
       ],
@@ -1296,6 +1138,11 @@
         }
       ],
       "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "007666c3",
+      "displayName": "Global Filters",
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS"
     }
   ],
   "uiSettings": {
