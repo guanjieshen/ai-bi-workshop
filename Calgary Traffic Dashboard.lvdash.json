@@ -1,0 +1,1306 @@
+{
+  "datasets": [
+    {
+      "name": "619be1dc",
+      "displayName": "traffic_cameras_cleaned",
+      "queryLines": [
+        "SELECT * FROM gshen_catalog.city_of_calgary.traffic_cameras_cleaned"
+      ]
+    },
+    {
+      "name": "a30678e8",
+      "displayName": "traffic_incidents",
+      "queryLines": [
+        "SELECT\n",
+        "  *\n",
+        "FROM\n",
+        "  gshen_catalog.city_of_calgary.traffic_incidents;"
+      ]
+    },
+    {
+      "name": "187bebcd",
+      "displayName": "taffic_incidents _cameras",
+      "queryLines": [
+        ""
+      ]
+    },
+    {
+      "name": "bf472e25",
+      "displayName": "Traffic Incidents With Nearest Cameras",
+      "queryLines": [
+        "SELECT\n",
+        "  i.id AS incident_id,\n",
+        "  i.start_dt AS incident_start_dt,\n",
+        "  i.incident_info,\n",
+        "  i.description,\n",
+        "  i.incident_type,\n",
+        "  i.impact_on_traffic,\n",
+        "  i.lat AS incident_lat,\n",
+        "  i.long AS incident_long,\n",
+        "  c.camera_number,\n",
+        "  c.latitude AS camera_lat,\n",
+        "  c.longitude AS camera_long,\n",
+        "  c.camera_url,\n",
+        "  ST_DISTANCE(\n",
+        "    ST_POINT(i.long, i.lat),\n",
+        "    ST_POINT(c.longitude, c.latitude)\n",
+        "  ) AS camera_distance_meters\n",
+        "FROM gshen_catalog.city_of_calgary.traffic_incidents_categorized_24h i\n",
+        "JOIN gshen_catalog.city_of_calgary.traffic_cameras_cleaned c\n",
+        "ON TRUE\n",
+        "QUALIFY ROW_NUMBER() OVER (\n",
+        "  PARTITION BY i.id\n",
+        "  ORDER BY ST_DISTANCE(\n",
+        "    ST_POINT(i.long, i.lat),\n",
+        "    ST_POINT(c.longitude, c.latitude)\n",
+        "  )\n",
+        ") = 1"
+      ]
+    },
+    {
+      "name": "c46a618a",
+      "displayName": "Traffic Incidents With Nearest Cameras (Forecasted)",
+      "queryLines": [
+        "WITH original_table AS (\n",
+        "    SELECT \n",
+        "  DATE_TRUNC(\"HOUR\", `incident_start_dt`) AS incident_start_dt,\n",
+        "  COUNT(*) AS count\n",
+        "FROM (\n",
+        "    SELECT\n",
+        "  i.id AS incident_id,\n",
+        "  i.start_dt AS incident_start_dt,\n",
+        "  i.incident_info,\n",
+        "  i.description,\n",
+        "  i.incident_type,\n",
+        "  i.impact_on_traffic,\n",
+        "  i.lat AS incident_lat,\n",
+        "  i.long AS incident_long,\n",
+        "  c.camera_number,\n",
+        "  c.latitude AS camera_lat,\n",
+        "  c.longitude AS camera_long,\n",
+        "  c.camera_url,\n",
+        "  ST_DISTANCE(\n",
+        "    ST_POINT(i.long, i.lat),\n",
+        "    ST_POINT(c.longitude, c.latitude)\n",
+        "  ) AS camera_distance_meters\n",
+        "FROM gshen_catalog.city_of_calgary.traffic_incidents_categorized_24h i\n",
+        "JOIN gshen_catalog.city_of_calgary.traffic_cameras_cleaned c\n",
+        "ON TRUE\n",
+        "QUALIFY ROW_NUMBER() OVER (\n",
+        "  PARTITION BY i.id\n",
+        "  ORDER BY ST_DISTANCE(\n",
+        "    ST_POINT(i.long, i.lat),\n",
+        "    ST_POINT(c.longitude, c.latitude)\n",
+        "  )\n",
+        ") = 1\n",
+        ") GROUP BY 1\n",
+        "  ),\n",
+        "  dates AS (\n",
+        "    SELECT \n",
+        "      MAX(incident_start_dt) AS max_date_column,\n",
+        "      MIN(incident_start_dt) AS min_date_column,\n",
+        "      MAX_BY(count, incident_start_dt) AS count\n",
+        "    FROM original_table\n",
+        "  ),\n",
+        "  forecast_table AS (\n",
+        "    SELECT \n",
+        "      incident_start_dt,\n",
+        "      count_forecast,\n",
+        "      count_upper,\n",
+        "      count_lower,\n",
+        "      NULL AS count\n",
+        "    FROM AI_FORECAST(\n",
+        "      TABLE(original_table),\n",
+        "      horizon => (\n",
+        "        SELECT\n",
+        "          max_date_column + MAKE_DT_INTERVAL(CAST(FLOOR(DATEDIFF(max_date_column, min_date_column) * 0.5) AS INT), 0, 0, 0)\n",
+        "        FROM dates\n",
+        "      ),\n",
+        "      time_col => 'incident_start_dt',\n",
+        "      value_col => 'count'\n",
+        "    )\n",
+        "  )\n",
+        "\n",
+        "  SELECT * FROM forecast_table\n",
+        "  UNION ALL\n",
+        "  SELECT\n",
+        "    incident_start_dt,\n",
+        "    NULL AS count_forecast,\n",
+        "    NULL AS count_upper,\n",
+        "    NULL AS count_lower,\n",
+        "    count\n",
+        "  FROM original_table\n",
+        "    WHERE incident_start_dt < (SELECT max_date_column FROM dates)\n",
+        "  UNION ALL\n",
+        "  SELECT\n",
+        "    max_date_column AS incident_start_dt,\n",
+        "    count AS count_forecast,\n",
+        "    count AS count_upper,\n",
+        "    count AS count_lower,\n",
+        "    count\n",
+        "  FROM\n",
+        "    dates"
+      ]
+    },
+    {
+      "name": "cc584069",
+      "displayName": "traffic_incidents (Forecasted)",
+      "queryLines": [
+        "WITH original_table AS (\n",
+        "    SELECT \n",
+        "  DATE_TRUNC(\"HOUR\", `modified_dt`) AS modified_dt,\n",
+        "  COUNT(*) AS count\n",
+        "FROM (\n",
+        "    SELECT\n",
+        "  *\n",
+        "FROM\n",
+        "  gshen_catalog.city_of_calgary.traffic_incidents\n",
+        ") GROUP BY 1\n",
+        "  ),\n",
+        "  dates AS (\n",
+        "    SELECT \n",
+        "      MAX(modified_dt) AS max_date_column,\n",
+        "      MIN(modified_dt) AS min_date_column,\n",
+        "      MAX_BY(count, modified_dt) AS count\n",
+        "    FROM original_table\n",
+        "  ),\n",
+        "  forecast_table AS (\n",
+        "    SELECT \n",
+        "      modified_dt,\n",
+        "      count_forecast,\n",
+        "      count_upper,\n",
+        "      count_lower,\n",
+        "      NULL AS count\n",
+        "    FROM AI_FORECAST(\n",
+        "      TABLE(original_table),\n",
+        "      horizon => (\n",
+        "        SELECT\n",
+        "          max_date_column + MAKE_DT_INTERVAL(CAST(FLOOR(DATEDIFF(max_date_column, min_date_column) * 0.5) AS INT), 0, 0, 0)\n",
+        "        FROM dates\n",
+        "      ),\n",
+        "      time_col => 'modified_dt',\n",
+        "      value_col => 'count'\n",
+        "    )\n",
+        "  )\n",
+        "\n",
+        "  SELECT * FROM forecast_table\n",
+        "  UNION ALL\n",
+        "  SELECT\n",
+        "    modified_dt,\n",
+        "    NULL AS count_forecast,\n",
+        "    NULL AS count_upper,\n",
+        "    NULL AS count_lower,\n",
+        "    count\n",
+        "  FROM original_table\n",
+        "    WHERE modified_dt < (SELECT max_date_column FROM dates)\n",
+        "  UNION ALL\n",
+        "  SELECT\n",
+        "    max_date_column AS modified_dt,\n",
+        "    count AS count_forecast,\n",
+        "    count AS count_upper,\n",
+        "    count AS count_lower,\n",
+        "    count\n",
+        "  FROM\n",
+        "    dates"
+      ]
+    },
+    {
+      "name": "313b55e0",
+      "displayName": "traffic_incidents (Forecasted)",
+      "queryLines": [
+        "WITH original_table AS (\n",
+        "    SELECT \n",
+        "  DATE_TRUNC(\"HOUR\", `modified_dt`) AS modified_dt,\n",
+        "  COUNT(*) AS count\n",
+        "FROM (\n",
+        "    SELECT\n",
+        "  *\n",
+        "FROM\n",
+        "  gshen_catalog.city_of_calgary.traffic_incidents\n",
+        ") GROUP BY 1\n",
+        "  ),\n",
+        "  dates AS (\n",
+        "    SELECT \n",
+        "      MAX(modified_dt) AS max_date_column,\n",
+        "      MIN(modified_dt) AS min_date_column,\n",
+        "      MAX_BY(count, modified_dt) AS count\n",
+        "    FROM original_table\n",
+        "  ),\n",
+        "  forecast_table AS (\n",
+        "    SELECT \n",
+        "      modified_dt,\n",
+        "      count_forecast,\n",
+        "      count_upper,\n",
+        "      count_lower,\n",
+        "      NULL AS count\n",
+        "    FROM AI_FORECAST(\n",
+        "      TABLE(original_table),\n",
+        "      horizon => (\n",
+        "        SELECT\n",
+        "          max_date_column + MAKE_DT_INTERVAL(CAST(FLOOR(DATEDIFF(max_date_column, min_date_column) * 0.5) AS INT), 0, 0, 0)\n",
+        "        FROM dates\n",
+        "      ),\n",
+        "      time_col => 'modified_dt',\n",
+        "      value_col => 'count'\n",
+        "    )\n",
+        "  )\n",
+        "\n",
+        "  SELECT * FROM forecast_table\n",
+        "  UNION ALL\n",
+        "  SELECT\n",
+        "    modified_dt,\n",
+        "    NULL AS count_forecast,\n",
+        "    NULL AS count_upper,\n",
+        "    NULL AS count_lower,\n",
+        "    count\n",
+        "  FROM original_table\n",
+        "    WHERE modified_dt < (SELECT max_date_column FROM dates)\n",
+        "  UNION ALL\n",
+        "  SELECT\n",
+        "    max_date_column AS modified_dt,\n",
+        "    count AS count_forecast,\n",
+        "    count AS count_upper,\n",
+        "    count AS count_lower,\n",
+        "    count\n",
+        "  FROM\n",
+        "    dates"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "0a64b171",
+      "displayName": "Current Traffic Report",
+      "layout": [
+        {
+          "widget": {
+            "name": "a6073d71",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bf472e25",
+                  "fields": [
+                    {
+                      "name": "impact_on_traffic",
+                      "expression": "`impact_on_traffic`"
+                    },
+                    {
+                      "name": "incident_lat",
+                      "expression": "`incident_lat`"
+                    },
+                    {
+                      "name": "incident_long",
+                      "expression": "`incident_long`"
+                    },
+                    {
+                      "name": "camera_url",
+                      "expression": "`camera_url`"
+                    },
+                    {
+                      "name": "description",
+                      "expression": "`description`"
+                    },
+                    {
+                      "name": "incident_type",
+                      "expression": "`incident_type`"
+                    },
+                    {
+                      "name": "incident_info",
+                      "expression": "`incident_info`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "symbol-map",
+              "encodings": {
+                "coordinates": {
+                  "latitude": {
+                    "fieldName": "incident_lat",
+                    "displayName": "incident_lat"
+                  },
+                  "longitude": {
+                    "fieldName": "incident_long",
+                    "displayName": "incident_long"
+                  }
+                },
+                "color": {
+                  "fieldName": "impact_on_traffic",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Major Impact",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 4
+                        }
+                      },
+                      {
+                        "value": "Minor Impact",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 3
+                        }
+                      },
+                      {
+                        "value": "Moderate Impact",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 2
+                        }
+                      }
+                    ]
+                  },
+                  "displayName": "impact_on_traffic"
+                },
+                "extra": [
+                  {
+                    "fieldName": "camera_url",
+                    "displayName": "camera_url"
+                  },
+                  {
+                    "fieldName": "description",
+                    "displayName": "description"
+                  },
+                  {
+                    "fieldName": "incident_type",
+                    "displayName": "incident_type"
+                  },
+                  {
+                    "fieldName": "incident_info",
+                    "displayName": "incident_info"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 11
+          }
+        },
+        {
+          "widget": {
+            "name": "6cb6284d",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bf472e25",
+                  "fields": [
+                    {
+                      "name": "camera_url",
+                      "expression": "`camera_url`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "camera_url",
+                  "displayName": "camera_url"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Traffic Camera Link"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "c22e0606",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bf472e25",
+                  "fields": [
+                    {
+                      "name": "count(incident_id)",
+                      "expression": "COUNT(`incident_id`)"
+                    },
+                    {
+                      "name": "incident_type",
+                      "expression": "`incident_type`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "count(incident_id)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Count of incident_id"
+                },
+                "color": {
+                  "fieldName": "incident_type",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "incident_type"
+                }
+              },
+              "frame": {
+                "title": "Traffic Incidents by Type",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 2,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
+            "name": "57ce2b27",
+            "queries": [
+              {
+                "name": "dashboards/01f06107f28115b18fb3488a21e44140/datasets/01f0610e95da18d4b9b3fb3692deacc9_incident_start_dt",
+                "query": {
+                  "datasetName": "bf472e25",
+                  "fields": [
+                    {
+                      "name": "incident_start_dt",
+                      "expression": "`incident_start_dt`"
+                    },
+                    {
+                      "name": "incident_start_dt_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "incident_start_dt",
+                    "displayName": "incident_start_dt",
+                    "queryName": "dashboards/01f06107f28115b18fb3488a21e44140/datasets/01f0610e95da18d4b9b3fb3692deacc9_incident_start_dt"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true
+              },
+              "selection": {
+                "defaultSelection": {
+                  "range": {
+                    "dataType": "DATETIME",
+                    "min": {
+                      "value": "now-12h/h"
+                    },
+                    "max": {
+                      "value": "now/h"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "8e328c97",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bf472e25",
+                  "fields": [
+                    {
+                      "name": "incident_start_dt",
+                      "expression": "`incident_start_dt`"
+                    },
+                    {
+                      "name": "description",
+                      "expression": "`description`"
+                    },
+                    {
+                      "name": "incident_type",
+                      "expression": "`incident_type`"
+                    },
+                    {
+                      "name": "impact_on_traffic",
+                      "expression": "`impact_on_traffic`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "incident_start_dt",
+                    "dateTimeFormat": "YYYY-MM-DD HH:mm:ss.SSS",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "datetime",
+                    "displayAs": "datetime",
+                    "visible": true,
+                    "order": 100001,
+                    "title": "incident_start_dt",
+                    "allowSearch": false,
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "displayName": "incident_start_dt"
+                  },
+                  {
+                    "fieldName": "description",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100003,
+                    "title": "description",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "displayName": "description"
+                  },
+                  {
+                    "fieldName": "incident_type",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100004,
+                    "title": "incident_type",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "displayName": "incident_type"
+                  },
+                  {
+                    "fieldName": "impact_on_traffic",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100005,
+                    "title": "impact_on_traffic",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "displayName": "impact_on_traffic"
+                  }
+                ]
+              },
+              "invisibleColumns": [
+                {
+                  "booleanValues": [
+                    "false",
+                    "true"
+                  ],
+                  "imageUrlTemplate": "{{ @ }}",
+                  "imageTitleTemplate": "{{ @ }}",
+                  "imageWidth": "",
+                  "imageHeight": "",
+                  "linkUrlTemplate": "{{ @ }}",
+                  "linkTextTemplate": "{{ @ }}",
+                  "linkTitleTemplate": "{{ @ }}",
+                  "linkOpenInNewTab": true,
+                  "name": "incident_id",
+                  "type": "string",
+                  "displayAs": "string",
+                  "order": 100000,
+                  "title": "incident_id",
+                  "allowSearch": false,
+                  "alignContent": "left",
+                  "allowHTML": false,
+                  "highlightLinks": false,
+                  "useMonospaceFont": false,
+                  "preserveWhitespace": false
+                },
+                {
+                  "booleanValues": [
+                    "false",
+                    "true"
+                  ],
+                  "imageUrlTemplate": "{{ @ }}",
+                  "imageTitleTemplate": "{{ @ }}",
+                  "imageWidth": "",
+                  "imageHeight": "",
+                  "linkUrlTemplate": "{{ @ }}",
+                  "linkTextTemplate": "{{ @ }}",
+                  "linkTitleTemplate": "{{ @ }}",
+                  "linkOpenInNewTab": true,
+                  "name": "incident_info",
+                  "type": "string",
+                  "displayAs": "string",
+                  "order": 100002,
+                  "title": "incident_info",
+                  "allowSearch": false,
+                  "alignContent": "left",
+                  "allowHTML": false,
+                  "highlightLinks": false,
+                  "useMonospaceFont": false,
+                  "preserveWhitespace": false
+                },
+                {
+                  "numberFormat": "0.00",
+                  "booleanValues": [
+                    "false",
+                    "true"
+                  ],
+                  "imageUrlTemplate": "{{ @ }}",
+                  "imageTitleTemplate": "{{ @ }}",
+                  "imageWidth": "",
+                  "imageHeight": "",
+                  "linkUrlTemplate": "{{ @ }}",
+                  "linkTextTemplate": "{{ @ }}",
+                  "linkTitleTemplate": "{{ @ }}",
+                  "linkOpenInNewTab": true,
+                  "name": "incident_lat",
+                  "type": "float",
+                  "displayAs": "number",
+                  "order": 100006,
+                  "title": "incident_lat",
+                  "allowSearch": false,
+                  "alignContent": "right",
+                  "allowHTML": false,
+                  "highlightLinks": false,
+                  "useMonospaceFont": false,
+                  "preserveWhitespace": false
+                },
+                {
+                  "numberFormat": "0.00",
+                  "booleanValues": [
+                    "false",
+                    "true"
+                  ],
+                  "imageUrlTemplate": "{{ @ }}",
+                  "imageTitleTemplate": "{{ @ }}",
+                  "imageWidth": "",
+                  "imageHeight": "",
+                  "linkUrlTemplate": "{{ @ }}",
+                  "linkTextTemplate": "{{ @ }}",
+                  "linkTitleTemplate": "{{ @ }}",
+                  "linkOpenInNewTab": true,
+                  "name": "incident_long",
+                  "type": "float",
+                  "displayAs": "number",
+                  "order": 100007,
+                  "title": "incident_long",
+                  "allowSearch": false,
+                  "alignContent": "right",
+                  "allowHTML": false,
+                  "highlightLinks": false,
+                  "useMonospaceFont": false,
+                  "preserveWhitespace": false
+                },
+                {
+                  "numberFormat": "0",
+                  "booleanValues": [
+                    "false",
+                    "true"
+                  ],
+                  "imageUrlTemplate": "{{ @ }}",
+                  "imageTitleTemplate": "{{ @ }}",
+                  "imageWidth": "",
+                  "imageHeight": "",
+                  "linkUrlTemplate": "{{ @ }}",
+                  "linkTextTemplate": "{{ @ }}",
+                  "linkTitleTemplate": "{{ @ }}",
+                  "linkOpenInNewTab": true,
+                  "name": "camera_number",
+                  "type": "integer",
+                  "displayAs": "number",
+                  "order": 100008,
+                  "title": "camera_number",
+                  "allowSearch": false,
+                  "alignContent": "right",
+                  "allowHTML": false,
+                  "highlightLinks": false,
+                  "useMonospaceFont": false,
+                  "preserveWhitespace": false
+                },
+                {
+                  "numberFormat": "0.00",
+                  "booleanValues": [
+                    "false",
+                    "true"
+                  ],
+                  "imageUrlTemplate": "{{ @ }}",
+                  "imageTitleTemplate": "{{ @ }}",
+                  "imageWidth": "",
+                  "imageHeight": "",
+                  "linkUrlTemplate": "{{ @ }}",
+                  "linkTextTemplate": "{{ @ }}",
+                  "linkTitleTemplate": "{{ @ }}",
+                  "linkOpenInNewTab": true,
+                  "name": "camera_lat",
+                  "type": "float",
+                  "displayAs": "number",
+                  "order": 100009,
+                  "title": "camera_lat",
+                  "allowSearch": false,
+                  "alignContent": "right",
+                  "allowHTML": false,
+                  "highlightLinks": false,
+                  "useMonospaceFont": false,
+                  "preserveWhitespace": false
+                },
+                {
+                  "numberFormat": "0.00",
+                  "booleanValues": [
+                    "false",
+                    "true"
+                  ],
+                  "imageUrlTemplate": "{{ @ }}",
+                  "imageTitleTemplate": "{{ @ }}",
+                  "imageWidth": "",
+                  "imageHeight": "",
+                  "linkUrlTemplate": "{{ @ }}",
+                  "linkTextTemplate": "{{ @ }}",
+                  "linkTitleTemplate": "{{ @ }}",
+                  "linkOpenInNewTab": true,
+                  "name": "camera_long",
+                  "type": "float",
+                  "displayAs": "number",
+                  "order": 100010,
+                  "title": "camera_long",
+                  "allowSearch": false,
+                  "alignContent": "right",
+                  "allowHTML": false,
+                  "highlightLinks": false,
+                  "useMonospaceFont": false,
+                  "preserveWhitespace": false
+                },
+                {
+                  "booleanValues": [
+                    "false",
+                    "true"
+                  ],
+                  "imageUrlTemplate": "{{ @ }}",
+                  "imageTitleTemplate": "{{ @ }}",
+                  "imageWidth": "",
+                  "imageHeight": "",
+                  "linkUrlTemplate": "{{ @ }}",
+                  "linkTextTemplate": "{{ @ }}",
+                  "linkTitleTemplate": "{{ @ }}",
+                  "linkOpenInNewTab": true,
+                  "name": "camera_url",
+                  "type": "string",
+                  "displayAs": "string",
+                  "order": 100011,
+                  "title": "camera_url",
+                  "allowSearch": false,
+                  "alignContent": "left",
+                  "allowHTML": false,
+                  "highlightLinks": false,
+                  "useMonospaceFont": false,
+                  "preserveWhitespace": false
+                },
+                {
+                  "numberFormat": "0.00",
+                  "booleanValues": [
+                    "false",
+                    "true"
+                  ],
+                  "imageUrlTemplate": "{{ @ }}",
+                  "imageTitleTemplate": "{{ @ }}",
+                  "imageWidth": "",
+                  "imageHeight": "",
+                  "linkUrlTemplate": "{{ @ }}",
+                  "linkTextTemplate": "{{ @ }}",
+                  "linkTitleTemplate": "{{ @ }}",
+                  "linkOpenInNewTab": true,
+                  "name": "camera_distance_meters",
+                  "type": "float",
+                  "displayAs": "number",
+                  "order": 100012,
+                  "title": "camera_distance_meters",
+                  "allowSearch": false,
+                  "alignContent": "right",
+                  "allowHTML": false,
+                  "highlightLinks": false,
+                  "useMonospaceFont": false,
+                  "preserveWhitespace": false
+                }
+              ],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 25,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "frame": {
+                "title": "Impact on Traffic",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 3,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
+            "name": "9c756391",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bf472e25",
+                  "fields": [
+                    {
+                      "name": "count(*)",
+                      "expression": "COUNT(`*`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "count(*)",
+                  "displayName": "Count of Records"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Number of Incidents"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 1,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "458d09e2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bf472e25",
+                  "fields": [
+                    {
+                      "name": "hourly(incident_start_dt)",
+                      "expression": "DATE_TRUNC(\"HOUR\", `incident_start_dt`)"
+                    },
+                    {
+                      "name": "count(*)",
+                      "expression": "COUNT(`*`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "hourly(incident_start_dt)",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "incident_start_dt"
+                },
+                "y": {
+                  "fieldName": "count(*)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Count of Records"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 12,
+            "width": 3,
+            "height": 9
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "ee060d39",
+      "displayName": "Historical Traffic",
+      "layout": [
+        {
+          "widget": {
+            "name": "9285f8e3",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "a30678e8",
+                  "fields": [
+                    {
+                      "name": "sum(incident_count)",
+                      "expression": "SUM(`incident_count`)"
+                    },
+                    {
+                      "name": "quadrant",
+                      "expression": "`quadrant`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "heatmap",
+              "encodings": {
+                "x": {
+                  "fieldName": "quadrant",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "quadrant"
+                },
+                "color": {
+                  "fieldName": "sum(incident_count)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Sum of incident_count"
+                }
+              },
+              "frame": {
+                "title": "Incident Count Over Time",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 2,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "b5fdaf0b",
+            "queries": [
+              {
+                "name": "dashboards/01f06107f28115b18fb3488a21e44140/datasets/01f061080685112f9de77b72399473bd_modified_dt",
+                "query": {
+                  "datasetName": "a30678e8",
+                  "fields": [
+                    {
+                      "name": "modified_dt",
+                      "expression": "`modified_dt`"
+                    },
+                    {
+                      "name": "modified_dt_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "modified_dt",
+                    "displayName": "modified_dt",
+                    "queryName": "dashboards/01f06107f28115b18fb3488a21e44140/datasets/01f061080685112f9de77b72399473bd_modified_dt"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "range": {
+                    "dataType": "DATETIME",
+                    "min": {
+                      "value": "now-12h/h"
+                    },
+                    "max": {
+                      "value": "now/h"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Timestamp Filter"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "21f88d38",
+            "queries": [
+              {
+                "name": "dashboards/01f06107f28115b18fb3488a21e44140/datasets/01f061080685112f9de77b72399473bd_quadrant",
+                "query": {
+                  "datasetName": "a30678e8",
+                  "fields": [
+                    {
+                      "name": "quadrant",
+                      "expression": "`quadrant`"
+                    },
+                    {
+                      "name": "quadrant_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "quadrant",
+                    "displayName": "quadrant",
+                    "queryName": "dashboards/01f06107f28115b18fb3488a21e44140/datasets/01f061080685112f9de77b72399473bd_quadrant"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Quadrant"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 0,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "8dce6e5e",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "a30678e8",
+                  "fields": [
+                    {
+                      "name": "hourly(modified_dt)",
+                      "expression": "DATE_TRUNC(\"HOUR\", `modified_dt`)"
+                    },
+                    {
+                      "name": "count(*)",
+                      "expression": "COUNT(`*`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "hourly(modified_dt)",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "modified_dt"
+                },
+                "y": {
+                  "fieldName": "count(*)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Count of Records"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 1,
+            "width": 4,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
+            "name": "3aa053db",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "a30678e8",
+                  "fields": [
+                    {
+                      "name": "sum(incident_count)",
+                      "expression": "SUM(`incident_count`)"
+                    },
+                    {
+                      "name": "quadrant",
+                      "expression": "`quadrant`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(incident_count)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Sum of incident_count"
+                },
+                "y": {
+                  "fieldName": "quadrant",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "quadrant"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 2,
+            "height": 7
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    }
+  }
+}
