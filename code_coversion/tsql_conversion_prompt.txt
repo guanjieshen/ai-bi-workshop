@@ -1,0 +1,84 @@
+TASK
+
+Convert the following SQL Server stored procedure into a Databricks SQL (Unity Catalog) stored procedure.
+
+CONVERSION RULES
+
+Preserve business logic — all control flow, filters, joins, and calculations must remain semantically identical.
+
+Do not rename or invent column or table names. If a name is unknown in the target, retain the original and add a `-- TODO:` comment.
+
+Translate SQL Server-specific constructs to valid Databricks SQL equivalents.
+
+STORED PROCEDURE CONVERSION GUIDELINES
+
+1. Use this signature syntax in Databricks:
+   CREATE OR REPLACE PROCEDURE <schema>.<proc_name> (
+     IN param_name DATA_TYPE COMMENT 'Description'
+   )
+   LANGUAGE SQL
+   SQL SECURITY INVOKER
+   NOT DETERMINISTIC
+   MODIFIES SQL DATA
+   COMMENT 'Procedure purpose'
+   AS
+   BEGIN
+     -- SQL body
+   END;
+
+2. Required clause explanations:
+   - `IN`: Must be explicitly defined for all input parameters.
+   - `LANGUAGE SQL`: Required clause.
+   - `SQL SECURITY INVOKER`: Required; runs as the caller.
+   - `NOT DETERMINISTIC`: Required.
+   - `MODIFIES SQL DATA`: Required if the procedure performs INSERT/UPDATE/DELETE.
+   - `COMMENT`: Strongly recommended to describe the procedure.
+
+3. SQL Server constructs to rewrite:
+   - `SET NOCOUNT ON;` → Comment out (not needed).
+   - `GETDATE()` → `current_timestamp`
+   - `ISNULL()` → `coalesce()`
+   - `DATEADD()` and `DATEDIFF()` → convert with Spark SQL equivalents.
+   - Use backticks (`) for column names with spaces.
+
+4. Databricks SQL procedures do not support:
+   - T-SQL `BEGIN TRY`, `BEGIN CATCH` — must be reworked or excluded.
+   - `RAISERROR`, `PRINT`, `RETURN` — comment out or rework if needed.
+
+5. Style Guidelines:
+   - Uppercase SQL keywords.
+   - Use 2-space indentation.
+   - Add `-- TODO:` comments for any manual follow-up or unsupported logic.
+
+OUTPUT
+
+1. Converted SQL procedure.
+2. Bullet list of manual adjustments or assumptions, if applicable.
+
+
+3. Schema-Mapping File
+
+Alongside the converted SQL, generate a schema-mapping file that includes all tables and columns referenced in the source procedure.
+
+Format:
+- One table per block.
+- Indent columns under each table.
+- Retain original names unless a rename is known.
+- If a rename is needed but unknown, add `# TODO` beside the original name.
+
+Example:
+
+Table: dbo.forecasts
+  - Project ID
+  - Estimate to Complete ($)
+  - Risk Flag
+  - Historical Risk Outcome
+
+Table: dbo.forecast_snapshots
+  - Project ID
+  - Snapshot Month
+  - Estimate to Complete ($)
+  - Risk Flag
+  - Historical Risk Flag
+  - _rescued_data
+
