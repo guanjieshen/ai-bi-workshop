@@ -1,0 +1,46 @@
+Project ID,Change Description,Reason,Cost Impact ($),Last Updated
+PRJ1000,Change related to Safety,Safety,78497.12,2024-07-01
+PRJ1000,Change related to Scope Creep,Regulatory,55955.85,2024-07-01
+PRJ1000,Change related to Design Change,Design Change,85100.84,2024-07-01
+PRJ1000,Change related to Regulatory,Scope Creep,73114.14,2024-07-01
+PRJ1001,Change related to Regulatory,Scope Creep,59182.48,2024-07-01
+PRJ1001,Change related to Safety,Scope Creep,19189.04,2024-07-01
+PRJ1001,Change related to Design Change,Design Change,73531.75,2024-07-01
+PRJ1002,Change related to Scope Creep,Scope Creep,93649.13,2024-07-01
+PRJ1003,Change related to Design Change,Design Change,38047.44,2024-07-01
+PRJ1003,Change related to Design Change,Scope Creep,87033.87,2024-07-01
+PRJ1003,Change related to Safety,Design Change,71507.43,2024-07-01
+PRJ1004,Change related to Design Change,Regulatory,26726.59,2024-07-01
+PRJ1004,Change related to Safety,Regulatory,33263.3,2024-07-01
+PRJ1004,Change related to Design Change,Regulatory,10877.69,2024-07-01
+PRJ1004,Change related to Safety,Regulatory,26890.43,2024-07-01
+PRJ1005,Change related to Design Change,Safety,73751.2,2024-07-01
+PRJ1006,Change related to Regulatory,Regulatory,96257.77,2024-07-01
+PRJ1006,Change related to Scope Creep,Regulatory,54811.71,2024-07-01
+PRJ1006,Change related to Regulatory,Safety,65347.91,2024-07-01
+PRJ1006,Change related to Design Change,Safety,22957.31,2024-07-01
+PRJ1007,Change related to Safety,Regulatory,76359.28,2024-07-01
+PRJ1008,Change related to Design Change,Safety,38416.97,2024-07-01
+PRJ1008,Change related to Safety,Safety,54798.41,2024-07-01
+PRJ1008,Change related to Design Change,Safety,40718.26,2024-07-01
+PRJ1008,Change related to Design Change,Scope Creep,62802.9,2024-07-01
+PRJ1009,Change related to Scope Creep,Design Change,70676.38,2024-07-01
+PRJ1010,Change related to Design Change,Design Change,97005.28,2024-07-01
+PRJ1010,Change related to Regulatory,Design Change,22633.83,2024-07-01
+PRJ1010,Change related to Design Change,Design Change,60637.42,2024-07-01
+PRJ1011,Change related to Regulatory,Regulatory,26231.3,2024-07-01
+PRJ1012,Change related to Safety,Safety,77688.56,2024-07-01
+PRJ1012,Change related to Regulatory,Safety,67716.61,2024-07-01
+PRJ1012,Change related to Scope Creep,Design Change,27195.09,2024-07-01
+PRJ1013,Change related to Scope Creep,Regulatory,41855.6,2024-07-01
+PRJ1014,Change related to Safety,Safety,56469.19,2024-07-01
+PRJ1014,Change related to Design Change,Scope Creep,33623.12,2024-07-01
+PRJ1015,Change related to Safety,Design Change,66428.97,2024-07-01
+PRJ1015,Change related to Design Change,Regulatory,20621.04,2024-07-01
+PRJ1015,Change related to Safety,Design Change,24353.87,2024-07-01
+PRJ1016,Change related to Design Change,Safety,25544.91,2024-07-01
+PRJ1017,Change related to Regulatory,Safety,64728.86,2024-07-01
+PRJ1018,Change related to Regulatory,Design Change,25973.03,2024-07-01
+PRJ1019,Change related to Design Change,Design Change,37839.65,2024-07-01
+PRJ1019,Change related to Regulatory,Regulatory,67588.53,2024-07-01
+PRJ1019,Change related to Regulatory,Safety,98196.92,2024-07-01
