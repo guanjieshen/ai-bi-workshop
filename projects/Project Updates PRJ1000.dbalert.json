@@ -1,0 +1,53 @@
+{
+  "custom_summary": "Project PRJ1000: Daily Update",
+  "evaluation": {
+    "source": {
+      "name": "project_summary_email",
+      "display": "project_summary_email",
+      "aggregation": "AGGREGATION_UNSPECIFIED"
+    },
+    "comparison_operator": "IS_NOT_NULL",
+    "threshold": {
+      "value": {
+        "string_value": ""
+      }
+    },
+    "notification": {
+      "retrigger_seconds": 1,
+      "notify_on_ok": false
+    }
+  },
+  "schedule": {
+    "quartz_cron_schedule": "14 30 7 * * ?",
+    "timezone_id": "America/Boise"
+  },
+  "query_lines": [
+    "SELECT",
+    "  ai_query(",
+    "    \"databricks-claude-sonnet-4\",",
+    "    CONCAT(",
+    "      \"You are generating an HTML-formatted project status update email. \",",
+    "      \"The HTML should be lightweight, clean, and use only the following supported tags: \",",
+    "      \"<a>, <abbr>, <acronym>, <b>, <blockquote>, <br>, <code>, <div>, <em>, <h1>, <h2>, <h3>, <h4>, <h5>, <h6>, <head>, <hr>, <i>, <li>, <ol>, <p>, <span>, <strong>, <table>, <tbody>, <td>, <th>, <tr>, <ul>. \",",
+    "      \"Supported attributes: href (for <a>), title (for <a>, <abbr>, <acronym>). Do not include the <html> or <head> tags. \",",
+    "      \"Structure the summary with a title, a metadata table, and a brief paragraph summarizing the project update. \",",
+    "      \"Use <strong> for labels, <br> for spacing, and <p> for body text. \",",
+    "      \"Here is the project information:\\n\",",
+    "      \"Project ID: \", `Project ID`, \"<br>\",",
+    "      \"Project Name: \", `Project Name`, \"<br>\",",
+    "      \"Start Date: \", `Start Date`, \"<br>\",",
+    "      \"End Date: \", `End Date`, \"<br>\",",
+    "      \"Total Budget (Million $): \", `Total Budget (Million $)`, \"<br>\",",
+    "      \"Region: \", `Region`, \"<br>\",",
+    "      \"Project Manager: \", `Project Manager`, \"<br><br>\",",
+    "      \"Project Update: \", `Project Update`",
+    "    )",
+    "  ) AS project_summary_email",
+    "FROM",
+    "  gshen_catalog.enb_projects_workshop.project_master",
+    "WHERE `Project ID` = 'PRJ1000'"
+  ],
+  "custom_description_lines": [
+    "{{QUERY_RESULT_VALUE}}"
+  ]
+}
