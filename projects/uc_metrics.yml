@@ -1,0 +1,82 @@
+version: 0.1
+
+source: gshen_catalog.enb_projects_workshop.unified_project_report
+
+dimensions:
+  - name: Project ID
+    expr: project_id
+  - name: Project Name
+    expr: project_name
+  - name: Start Date
+    expr: start_date
+  - name: End Date
+    expr: end_date
+  - name: Region
+    expr: region
+  - name: Project Manager
+    expr: project_manager
+  - name: Risk Flag
+    expr: risk_flag
+  - name: Historical Risk Outcome
+    expr: historical_risk_outcome
+
+measures:
+  - name: Total Budget
+    expr: SUM(total_budget)
+
+  - name: Total Actual Cost
+    expr: SUM(total_actual_cost)
+
+  - name: Total Change Cost
+    expr: SUM(total_change_cost)
+
+  - name: Cost Overrun
+    expr: SUM(total_actual_cost) - SUM(total_budget)
+
+  - name: Cost Overrun Percent
+    expr: 100 * (SUM(total_actual_cost) - SUM(total_budget)) / NULLIF(SUM(total_budget), 0)
+
+  - name: Budget Utilization Percent
+    expr: 100 * SUM(total_actual_cost) / NULLIF(SUM(total_budget), 0)
+
+  - name: Change Cost Percent of Budget
+    expr: 100 * SUM(total_change_cost) / NULLIF(SUM(total_budget), 0)
+
+  - name: Estimate to Complete
+    expr: SUM(estimate_to_complete)
+
+  - name: Estimate at Completion
+    expr: SUM(estimate_at_completion)
+
+  - name: Forecast Variance vs Budget
+    expr: SUM(estimate_at_completion) - SUM(total_budget)
+
+  - name: Forecast Variance Percent
+    expr: 100 * (SUM(estimate_at_completion) - SUM(total_budget)) / NULLIF(SUM(total_budget), 0)
+
+  - name: Count High Risk Projects
+    expr: COUNT_IF(risk_flag = 'High')
+
+  - name: Percent Projects Over Budget
+    expr: 100.0 * COUNT_IF(total_actual_cost > total_budget) / NULLIF(COUNT(*), 0)
+
+  - name: Average Change Orders
+    expr: AVG(num_changes)
+
+  - name: Total Safety Incidents
+    expr: SUM(total_safety_incidents)
+
+  - name: Average Safety Incidents
+    expr: AVG(total_safety_incidents)
+
+  - name: Average Quality Rating
+    expr: AVG(avg_quality_rating)
+
+  - name: Total Delays
+    expr: SUM(total_delays)
+
+  - name: Average Delays
+    expr: AVG(total_delays)
+
+  - name: Project Duration Days
+    expr: DATEDIFF(MAX(end_date), MIN(start_date))
