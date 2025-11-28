@@ -1,0 +1,15 @@
+# The main job for the NYC Taxi pipeline
+resources:
+  jobs:
+    aeso_pool_price:
+      name: aeso_pool_price_ingestion
+
+      schedule:
+        # Run every day at 8:37 AM MST
+        quartz_cron_expression: "44 37 8 * * ?"
+        timezone_id: America/Boise
+
+      tasks:
+        - task_key: refresh_pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.nyctaxi_ingestion_pipeline.id}

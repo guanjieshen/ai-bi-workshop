@@ -1,0 +1,14 @@
+# The main pipeline for test
+
+resources:
+  pipelines:
+    aeso_pool_price_pipeline:
+      name: test_etl
+      catalog: ${var.catalog}
+      schema: ${var.schema}
+      serverless: true
+      root_path: "."
+
+      libraries:
+        - glob:
+            include: transformations/**
